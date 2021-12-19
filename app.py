@@ -42,6 +42,7 @@ class Venue(db.Model):
     seeking_talent = db.Column(db.Boolean())
     seeking_description = db.Column(db.String(120))
     image_link = db.Column(db.String(500))
+    shows = db.relationship('show', backref='venues', lazy=True)
     
     def __repr__(self):
       return f"{self.name} venue in {self.city} city"
@@ -62,16 +63,24 @@ class Artist(db.Model):
     seeking_venue = db.Column(db.Boolean())
     seeking_description = db.Column(db.String(120))
     image_link = db.Column(db.String(500))
-
+    shows = db.relationship('show', backref='artist', lazy=True, cascade='save-update')
+    # collection_class
     def __repr__(self):
       return f"{self.name} artist in {self.city} city"
 
     # TODO: implement any missing fields, as a database migration using Flask-Migrate
 
-class 
+class Show(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  venue_id = db.Column(db.Integer, db.ForeignKey('Venue.id'))
+  artist_id = db.Column(db.Integer, db.ForeignKey('Artist.id'))
+  start_time = db.Column(db.DateTime, nullable=False)
+
+  def __str__(self):
+    return f"Artist_id: {self.artist_id} - Venue_id: {self.venue_id}"
 
 # TODO Implement Show and Artist models, and complete all model relationships and properties, as a database migration.
-
+db.create_all()
 #----------------------------------------------------------------------------#
 # Filters.
 #----------------------------------------------------------------------------#
