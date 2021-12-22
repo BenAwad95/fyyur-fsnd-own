@@ -8,6 +8,7 @@ import babel
 from flask import Flask, render_template, request, Response, flash, redirect, url_for
 from flask_moment import Moment
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 import logging
 from logging import Formatter, FileHandler
 from flask_wtf import Form
@@ -20,7 +21,7 @@ app = Flask(__name__)
 moment = Moment(app)
 app.config.from_object('config')
 db = SQLAlchemy(app)
-
+migrat = Migrate(app, db)
 # TODO: connect to a local postgresql database
 #* DONE 
 #----------------------------------------------------------------------------#
@@ -76,11 +77,11 @@ class Show(db.Model):
   artist_id = db.Column(db.Integer, db.ForeignKey('Artist.id'))
   start_time = db.Column(db.DateTime, nullable=False)
 
-  def __str__(self):
-    return f"Artist_id: {self.artist_id} - Venue_id: {self.venue_id}"
+  def __repr__(self):
+    return f"Artist: {self.artist_id} - Venue: {self.venue_id}"
 
 # TODO Implement Show and Artist models, and complete all model relationships and properties, as a database migration.
-db.create_all()
+# db.create_all() # this before we use the flask migrate
 #----------------------------------------------------------------------------#
 # Filters.
 #----------------------------------------------------------------------------#
