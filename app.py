@@ -35,16 +35,16 @@ class Venue(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String)
     genres = db.Column(db.ARRAY(db.String()))
-    address = db.Column(db.String(120))
+    addres = db.Column(db.String(120))
     city = db.Column(db.String(120))
     state = db.Column(db.String(120))
     phone = db.Column(db.String(120))
-    website = db.Column(db.String(120))
+    website_link = db.Column(db.String(120))
     facebook_link = db.Column(db.String(500))
     seeking_talent = db.Column(db.Boolean())
     seeking_description = db.Column(db.String(120))
     image_link = db.Column(db.String(500))
-    shows = db.relationship('show', backref='venues', lazy=True)
+    shows = db.relationship('Show', backref='venues', lazy=True)
     
     def __repr__(self):
       return f"{self.name} venue in {self.city} city"
@@ -65,7 +65,7 @@ class Artist(db.Model):
     seeking_venue = db.Column(db.Boolean())
     seeking_description = db.Column(db.String(120))
     image_link = db.Column(db.String(500))
-    shows = db.relationship('show', backref='artist', lazy=True, cascade='save-update')
+    shows = db.relationship('Show', backref='artist', lazy=True, cascade='save-update')
     # collection_class
     def __repr__(self):
       return f"{self.name} artist in {self.city} city"
@@ -258,9 +258,10 @@ def create_venue_submission():
     facebook_link = request.form.get('facebook_link')
     image_link = request.form.get('image_link')
     website_link = request.form.get('website_link')
-    seeking_talent = request.form.get('seeking_talent')
-    seekin_description = request.form.get('seekin_description')
-    new_venue = Venue(name=name, city=city, state=state, addres=addres, phone=phone, genres=genres, facebook_link=facebook_link, image_link=image_link, website_link=website_link, seeking_talent=seeking_talent, seekin_description=seekin_description)
+    #! you have handel the boolean value
+    seeking_talent = True if request.form.get('seeking_talent') == 'y' else False
+    seeking_description = request.form.get('seeking_description')
+    new_venue = Venue(name=name, city=city, state=state, addres=addres, phone=phone, genres=genres, facebook_link=facebook_link, image_link=image_link, website_link=website_link, seeking_talent=seeking_talent, seeking_description=seeking_description)
     db.session.add(new_venue)
     db.session.commit()
     # on successful db insert, flash success
