@@ -2,6 +2,7 @@
 # Imports
 #----------------------------------------------------------------------------#
 
+from datetime import date
 import json
 import sys
 import dateutil.parser
@@ -9,6 +10,7 @@ import babel
 from flask import Flask, render_template, request, Response, flash, redirect, url_for
 from flask_moment import Moment
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import func
 from flask_migrate import Migrate
 import logging
 from logging import Formatter, FileHandler
@@ -76,7 +78,7 @@ class Show(db.Model):
   id = db.Column(db.Integer, primary_key=True)
   venue_id = db.Column(db.Integer, db.ForeignKey('Venue.id'))
   artist_id = db.Column(db.Integer, db.ForeignKey('Artist.id'))
-  start_time = db.Column(db.DateTime, nullable=False, default=datetime.utcnow())
+  start_time = db.Column(db.DateTime, nullable=False)
 
   def __repr__(self):
     return f"Artist: {self.artist_id} - Venue: {self.venue_id}"
@@ -113,27 +115,46 @@ def index():
 def venues():
   # TODO: replace with real venues data.
   #       num_upcoming_shows should be aggregated based on number of upcoming shows per venue.
-  data=[{
-    "city": "San Francisco",
-    "state": "CA",
-    "venues": [{
-      "id": 1,
-      "name": "The Musical Hop",
-      "num_upcoming_shows": 0,
-    }, {
-      "id": 3,
-      "name": "Park Square Live Music & Coffee",
-      "num_upcoming_shows": 1,
-    }]
-  }, {
-    "city": "New York",
-    "state": "NY",
-    "venues": [{
-      "id": 2,
-      "name": "The Dueling Pianos Bar",
-      "num_upcoming_shows": 0,
-    }]
-  }]
+  # first i got venues group by city
+  venues_cities = Venue.query.with_entities(func.count(Venue.id), Venue.city, Venue.state).group_by(Venue.city, Venue.state).all()
+  # lob over cities and get all venues in that city
+  data = []
+  for city in venues_cities:
+    venues = Venue.query.filter_by(city=city.city, state=city.state).all()
+    venues_list = []
+    for venue in venues:
+      venues_list.append({
+        'id': venue.id,
+        'name': venue.name,
+        'num_upcoming_shows': Show.query.filter_by(venue_id=venue.id).filter(Show.start_time>datetime.now()).count()
+      })
+    data.append({
+      'city': city.city,
+      'state': city.state,
+      'venues': venues_list
+    })
+  print(data)
+  # data=[{
+  #   "city": "San Francisco",
+  #   "state": "CA",
+  #   "venues": [{
+  #     "id": 1,
+  #     "name": "The Musical Hop",
+  #     "num_upcoming_shows": 0,
+  #   }, {
+  #     "id": 3,
+  #     "name": "Park Square Live Music & Coffee",
+  #     "num_upcoming_shows": 1,
+  #   }]
+  # }, {
+  #   "city": "New York",
+  #   "state": "NY",
+  #   "venues": [{
+  #     "id": 2,
+  #     "name": "The Dueling Pianos Bar",
+  #     "num_upcoming_shows": 0,
+  #   }]
+  # }]
   return render_template('pages/venues.html', areas=data);
 
 @app.route('/venues/search', methods=['POST'])
@@ -552,7 +573,8 @@ def create_show_submission():
   try:
     artist_id = request.form.get('artist_id')
     venue_id = request.form.get('venue_id')
-    new_show = Show(artist_id=artist_id, venue_id=venue_id)
+    start_time = request.form.get('start_time')
+    new_show = Show(artist_id=artist_id, venue_id=venue_id, start_time=start_time)
     db.session.add(new_show)
     db.session.commit()
     flash('Show was successfully listed!')
