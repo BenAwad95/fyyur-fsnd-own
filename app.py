@@ -37,7 +37,7 @@ class Venue(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String)
     genres = db.Column(db.ARRAY(db.String()))
-    addres = db.Column(db.String(120))
+    address = db.Column(db.String(120))
     city = db.Column(db.String(120))
     state = db.Column(db.String(120))
     phone = db.Column(db.String(120))
@@ -218,17 +218,7 @@ def show_venue(venue_id):
     "upcoming_shows_count": 0,
   }
   data3={
-    "id": 3,
-    "name": "Park Square Live Music & Coffee",
-    "genres": ["Rock n Roll", "Jazz", "Classical", "Folk"],
-    "address": "34 Whiskey Moore Ave",
-    "city": "San Francisco",
-    "state": "CA",
-    "phone": "415-000-1234",
-    "website": "https://www.parksquarelivemusicandcoffee.com",
-    "facebook_link": "https://www.facebook.com/ParkSquareLiveMusicAndCoffee",
-    "seeking_talent": False,
-    "image_link": "https://images.unsplash.com/photo-1485686531765-ba63b07845a7?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=747&q=80",
+    
     "past_shows": [{
       "artist_id": 5,
       "artist_name": "Matt Quevedo",
@@ -254,8 +244,47 @@ def show_venue(venue_id):
     "past_shows_count": 1,
     "upcoming_shows_count": 1,
   }
-  data = list(filter(lambda d: d['id'] == venue_id, [data1, data2, data3]))[0]
-  return render_template('pages/show_venue.html', venue=data)
+  # data = list(filter(lambda d: d['id'] == venue_id, [data1, data2, data3]))[0]
+  venue = Venue.query.get(venue_id)
+  if not venue:
+    return render_template('errors/404.html')
+  upcoming_shows = []
+  past_shows = []
+  shows = Show.query.filter_by(venue_id=venue.id).all()
+  for show in shows:
+    show_artist = Artist.query.get(show.artist_id)
+    if show.start_time>datetime.now():
+      upcoming_shows.append({
+        'artist_id': show_artist.id,
+        'artist_name': show_artist.name,
+        'artist_image_link': show_artist.image_link,
+        'start_time': show.start_time.strftime('%m-%Y %H:%M')
+      })
+    else:
+      past_shows.append({
+        'artist_id': show_artist.id,
+        'artist_name': show_artist.name,
+        'artist_image_link': show_artist.image_link,
+        'start_time': show.start_time.strftime('%m-%Y %H:%M')
+      })
+  venue_context = {
+    "id": venue.id,
+    "name": venue.name,
+    "genres": venue.genres,
+    "address": venue.address,
+    "city": venue.city,
+    "state": venue.state,
+    "phone": venue.phone,
+    "website": venue.website_link,
+    "facebook_link": venue.facebook_link,
+    "seeking_talent": venue.seeking_talent,
+    "image_link": venue.image_link,
+    "past_shows": past_shows,
+    "upcoming_shows": upcoming_shows,
+    "past_shows_count": len(past_shows),
+    "upcoming_shows_count": len(upcoming_shows)
+  }
+  return render_template('pages/show_venue.html', venue=venue_context)
 
 #  Create Venue
 #  ----------------------------------------------------------------
