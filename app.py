@@ -133,7 +133,7 @@ def venues():
       'state': city.state,
       'venues': venues_list
     })
-  print(data)
+  # print(data)
   # data=[{
   #   "city": "San Francisco",
   #   "state": "CA",
@@ -162,13 +162,14 @@ def search_venues():
   # TODO: implement search on artists with partial string search. Ensure it is case-insensitive.
   # seach for Hop should return "The Musical Hop".
   # search for "Music" should return "The Musical Hop" and "Park Square Live Music & Coffee"
+  search_term = request.form.get('search_term', '')
+  queryset = Venue.query.filter(Venue.name.ilike(f"%{search_term}%")).all()
   response={
-    "count": 1,
+    "count": len(queryset),
     "data": [{
-      "id": 2,
-      "name": "The Dueling Pianos Bar",
-      "num_upcoming_shows": 0,
-    }]
+      "id": venue.id,
+      "name": venue.name,
+      "num_upcoming_shows": Show.query.filter_by(venue_id=venue.id).filter(Show.start_time>datetime.now()).count(),} for venue in queryset ]
   }
   return render_template('pages/search_venues.html', results=response, search_term=request.form.get('search_term', ''))
 
