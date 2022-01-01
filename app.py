@@ -4,6 +4,7 @@
 
 from datetime import date
 import json
+from os import abort
 import sys
 import dateutil.parser
 import babel
@@ -370,14 +371,16 @@ def search_artists():
   # TODO: implement search on artists with partial string search. Ensure it is case-insensitive.
   # seach for "A" should return "Guns N Petals", "Matt Quevado", and "The Wild Sax Band".
   # search for "band" should return "The Wild Sax Band".
+  search_term = request.form.get('search_term', '')
+  queryset = Artist.query.filter(Artist.name.ilike(f"%{search_term}%")).all()
   response={
-    "count": 1,
+    "count": len(queryset),
     "data": [{
-      "id": 4,
-      "name": "Guns N Petals",
-      "num_upcoming_shows": 0,
-    }]
+      "id": artist.id,
+      "name": artist.name,
+      "num_upcoming_shows": Show.query.filter_by(artist_id=artist.id).filter(Show.start_time>datetime.now()).count(),} for artist in queryset ]
   }
+
   return render_template('pages/search_artists.html', results=response, search_term=request.form.get('search_term', ''))
 
 @app.route('/artists/<int:artist_id>')
@@ -455,27 +458,56 @@ def show_artist(artist_id):
     "past_shows_count": 0,
     "upcoming_shows_count": 3,
   }
-  data = list(filter(lambda d: d['id'] == artist_id, [data1, data2, data3]))[0]
-  return render_template('pages/show_artist.html', artist=data)
+  artist = Artist.query.get(artist_id)
+  if not artist:
+    return render_template('errors/404.html')
+  upcoming_shows = []
+  past_shows = []
+  shows = Show.query.filter_by(artist_id=artist.id).all()
+  for show in shows:
+    show_venue = Artist.query.get(show.artist_id)
+    if show.start_time>datetime.now():
+      upcoming_shows.append({
+        'venue_id': show_venue.id,
+        'venue_name': show_venue.name,
+        'venue_image_link': show_venue.image_link,
+        'start_time': show.start_time.strftime('%m-%Y %H:%M')
+      })
+    else:
+      past_shows.append({
+        'venue_id': show_venue.id,
+        'venue_name': show_venue.name,
+        'venue_image_link': show_venue.image_link,
+        'start_time': show.start_time.strftime('%m-%Y %H:%M')
+      })
+  artist_context = {
+    "id": artist.id,
+    "name": artist.name,
+    "genres": artist.genres,
+    "city": artist.city,
+    "state": artist.state,
+    "phone": artist.phone,
+    "website": artist.website_link,
+    "facebook_link": artist.facebook_link,
+    "seeking_venue": artist.seeking_venue,
+    "image_link": artist.image_link,
+    "past_shows": past_shows,
+    "upcoming_shows": upcoming_shows,
+    "past_shows_count": len(past_shows),
+    "upcoming_shows_count": len(upcoming_shows)
+  }
+  return render_template('pages/show_artist.html', artist=artist_context)
 
 #  Update
 #  ----------------------------------------------------------------
 @app.route('/artists/<int:artist_id>/edit', methods=['GET'])
 def edit_artist(artist_id):
-  form = ArtistForm()
-  artist={
-    "id": 4,
-    "name": "Guns N Petals",
-    "genres": ["Rock n Roll"],
-    "city": "San Francisco",
-    "state": "CA",
-    "phone": "326-123-5000",
-    "website": "https://www.gunsnpetalsband.com",
-    "facebook_link": "https://www.facebook.com/GunsNPetals",
-    "seeking_venue": True,
-    "seeking_description": "Looking for shows to perform at in the San Francisco Bay Area!",
-    "image_link": "https://images.unsplash.com/photo-1549213783-8284d0336c4f?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=300&q=80"
-  }
+  artist= Artist.query.get(artist_id)
+  if not artist:
+    return abort(404)
+    
+  form = ArtistForm(obj=artist)
+  
   # TODO: populate form with fields from artist with ID <artist_id>
   return render_template('forms/edit_artist.html', form=form, artist=artist)
 
